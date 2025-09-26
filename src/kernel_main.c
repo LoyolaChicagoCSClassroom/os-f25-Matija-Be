@@ -71,7 +71,7 @@ void scroll(){
 void main() {
    printf(putc,"Hello, World!\n");
    for(int i = 0; i < 30; i++){
-        printf("Hello, World!\n");
+        printf(putc,"Hello, World!\n");
     }
     while(1) {
         uint8_t status = inb(0x64);
