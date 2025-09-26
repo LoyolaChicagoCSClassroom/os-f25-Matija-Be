@@ -18,7 +18,7 @@ struct termbuf {
 
 int x = 0;
 int y = 0;
-void print_char(char c){
+void putc(int data){
         struct termbuf *vram = (struct termbuf*)0xB8000;
         //We want to check if our x is greater then 80
          if (x >= 80){
@@ -29,6 +29,8 @@ void print_char(char c){
         }
         //We check if y is greater then y
         if(y >=25){
+        //call the scroll function
+        scroll();
         //Then we stop becuase its full
            return;
         }
@@ -36,16 +38,41 @@ void print_char(char c){
         //have to multiply by to because termbuf already helps us
         //with the 2 byts 
         int offset = y * 80 + x;
-        vram[offset].ascii = c;
+        vram[offset].ascii = data;
         vram[offset].color = 7;
         x++;
 
 }
 
 
+
+void scroll(){
+    struct termbuf* vram = (struct termbuf*)0xB8000;
+
+        //This for loops job is to make sure that when there 
+        //is no space it will shift the content.
+    for (int y = 1; y < 25; y++) {
+        for (int x = 0; x < 80; x++) {
+            vram[(y - 1)  * 80 + x] = vram[y * 80 + x];
+        }
+    }
+
+        //What this will do will that it will clear 
+        //the very last row to make space
+    for (int x = 0; x < 80; x++) {
+        vram[(25 - 1) * 80 + x].ascii = ' ';
+        vram[(25 - 1) * 80 + x].color = 7;
+    }
+
+
+}
+
+
 void main() {
-    print_char('m');
-    print_char('a');
+   printf(putc,"Hello, World!\n");
+   for(int i = 0; i < 30; i++){
+        printf("Hello, World!\n");
+    }
     while(1) {
         uint8_t status = inb(0x64);
 
@@ -54,4 +81,5 @@ void main() {
         }
     }
 }
+
 
