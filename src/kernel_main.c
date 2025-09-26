@@ -10,11 +10,42 @@ uint8_t inb (uint16_t _port) {
     __asm__ __volatile__ ("inb %1, %0" : "=a" (rv) : "dN" (_port));
     return rv;
 }
+//Already two bytes long
+struct termbuf {
+        char ascii;
+        char color;
+};
+
+int x = 0;
+int y = 0;
+void print_char(char c){
+        struct termbuf *vram = (struct termbuf*)0xB8000;
+        //We want to check if our x is greater then 80
+         if (x >= 80){
+        //Then we restart x
+             x = 0;
+        //And incramnet y to go to the next line 
+             y++;
+        }
+        //We check if y is greater then y
+        if(y >=25){
+        //Then we stop becuase its full
+           return;
+        }
+        //Helps us track where we can the charachter and we dont
+        //have to multiply by to because termbuf already helps us
+        //with the 2 byts 
+        int offset = y * 80 + x;
+        vram[offset].ascii = c;
+        vram[offset].color = 7;
+        x++;
+
+}
+
 
 void main() {
-    unsigned short *vram = (unsigned short*)0xb8000; // Base address of video mem
-    const unsigned char color = 7; // gray text on black background
-
+    print_char('m');
+    print_char('a');
     while(1) {
         uint8_t status = inb(0x64);
 
@@ -23,3 +54,4 @@ void main() {
         }
     }
 }
+
