@@ -25,7 +25,7 @@ SDIR = src
 OBJS = \
 	kernel_main.o \
 	rprintf.o\
-	interrupt.io
+	
 # Make sure to keep a blank line here after OBJS list
 
 OBJ = $(patsubst %,$(ODIR)/%,$(OBJS))
