@@ -4,11 +4,10 @@
 #define MULTIBOOT2_HEADER_MAGIC         0xe85250d6
 const unsigned int multiboot_header[]  __attribute__((section(".multiboot"))) = {MULTIBOOT2_HEADER_MAGIC, 0, 16, -(16+MULTIBOOT2_HEADER_MAGIC), 0, 12};
 
-uint8_t inb (uint16_t _port) {
-    uint8_t rv;
-    __asm__ __volatile__ ("inb %1, %0" : "=a" (rv) : "dN" (_port));
-   	 return;
-}
+uint8_t inb (uint16_t _port);
+    
+
+
 //Already two bytes long
 struct termbuf {
       char ascii;
@@ -83,17 +82,18 @@ void scroll(){
 
 
 void main(){ 
-     for(int i = 0; i < 30; i++){	
-	esp_printf(putc,"Line check %d\n", i+1);
-     }
 
+     // These are helper that helps us enable the interrupts for the platoform
+    remap_pic();  //This help set the interrupt controller
+    load_gdt();   //This load thr global descripter table
+    init_idt();   // Initialize the interrupt descriptor table
+    asm("sti");   // Enable interrupts
+   
+    
+   
+ 
     while(1) {
-        uint8_t status = inb(0x64);
-       	
-
-        if(status & 1) {
-            uint8_t scancode = inb(0x60);
-        }
+        asm("hlt");  // Halt until next interrupt
     }
 }
 
