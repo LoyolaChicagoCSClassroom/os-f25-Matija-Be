@@ -80,7 +80,6 @@ void scroll(){
 }
 
 
-
 void main(){ 
 
      // These are helper that helps us enable the interrupts for the platoform
@@ -89,7 +88,7 @@ void main(){
     init_idt();   // Initialize the interrupt descriptor table
     asm("sti");   // Enable interrupts
    
-    
+    init_pfa_list();    
    
  
     while(1) {
