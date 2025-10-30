@@ -1,11 +1,37 @@
 #include "rprintf.h"
 #include <stdint.h>
-
+#include "page.h"
 #define MULTIBOOT2_HEADER_MAGIC         0xe85250d6
 const unsigned int multiboot_header[]  __attribute__((section(".multiboot"))) = {MULTIBOOT2_HEADER_MAGIC, 0, 16, -(16+MULTIBOOT2_HEADER_MAGIC), 0, 12};
 
 uint8_t inb (uint16_t _port);
-    
+
+struct page_directory_entry
+{
+   uint32_t present       : 1;   // Page present in memory
+   uint32_t rw            : 1;   // Read-only if clear, R/W if set
+   uint32_t user          : 1;   // Supervisor only if clear
+   uint32_t writethru     : 1;   // Cache this directory as write-thru only
+   uint32_t cachedisabled : 1;   // Disable cache on this page table?
+   uint32_t accessed      : 1;   // Supervisor level only if clear
+   uint32_t pagesize      : 1;   // Has the page been accessed since last refresh?
+   uint32_t ignored       : 2;   // Has the page been written to since last refresh?
+   uint32_t os_specific   : 3;   // Amalgamation of unused and reserved bits
+   uint32_t frame         : 20;  // Frame address (shifted right 12 bits)
+};
+struct page
+{
+   uint32_t present    : 1;   // Page present in memory
+   uint32_t rw         : 1;   // Read-only if clear, readwrite if set
+   uint32_t user       : 1;   // Supervisor level only if clear
+   uint32_t accessed   : 1;   // Has the page been accessed since last refresh?
+   uint32_t dirty      : 1;   // Has the page been written to since last refresh?
+   uint32_t unused     : 7;   // Amalgamation of unused and reserved bits
+   uint32_t frame      : 20;  // Frame address (shifted right 12 bits)
+};
+
+struct page_directory_entry pd[1024] __attribute__((aligned(4096)));
+struct page pt[1024] __attribute__((aligned(4096)));
 
 
 //Already two bytes long
@@ -78,9 +104,95 @@ void scroll(){
 
 	
 }
+void *map_pages(void *vaddr, struct ppgae *pglist, struct page_directory_entry *pd){
+	struct ppage *current = pglist;
+	
+	while(current != NULL){
+	//Since it is a 32 bit we want to get the first 10 bits for the page_directory.
+	uint32_t  pdindex = (((uint32_t) vaddr  >> 22) & 0x3FF);
+	//Then we want to get the next 10 bits.
+	uint32_t  ptindex = (((uint32_t) vaddr  >> 12) & 0x3FF);
+	//Then we want to check if the pd entry is present 
+	if(!pd[pdindex].present){
+		//We want to create Page directory entry 
+		pd[pdindex].present = 1;
+		pd[pdindex].rw = 1;
+		pd[pdindex].user = 0;
+		pd[pdindex].writethru = 0;
+		pd[pdindex].cachedisabled = 0;
+		pd[pdindex].accessed = 0;
+		pd[pdindex].pagesize = 0;
+		pd[pdindex].ignored = 0;
+		pd[pdindex].os_specific = 0;
+		pd[pdindex].frame = (uint32_t)pt >> 12;
+	}
+	//This also create a new virtual page mapping
+	pt[ptindex].present = 1;
+	pt[ptindex].rw = 1;
+	pt[ptindex].user = 0;
+	pd[pdindex].writethru = 0;
+        pd[pdindex].cachedisabled = 0;
+        pd[pdindex].accessed = 0;
+        pd[pdindex].pagesize = 0;
+        pd[pdindex].ignored = 0;
+        pd[pdindex].os_specific = 0;
+	pt[ptindex].frame = ((uint32_t)vaddr >> 12);
+	
 
+	vaddr = ((uint32_t)vaddr + 4096);
+	current = current -> next;
+	}
 
+}
+
+void loadPageDirectory(struct page_directory_entry *pd){
+	asm("mov %0, %%cr3" :: "r"(pd) : );
+
+}
 void main(){ 
+	
+	struct ppage tmp;
+	tmp.next = NULL;
+	tmp.physical_addr = 0x100000;
+	map_pages(0x100000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x101000;
+        map_pages(0x101000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x102000;
+        map_pages(0x102000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x103000;
+        map_pages(0x103000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x104000;
+        map_pages(0x104000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x105000;
+        map_pages(0x105000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x106000;
+        map_pages(0x106000, &tmp, pd);
+
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x107000;
+        map_pages(0x107000, &tmp, pd);
+
+
+        tmp.next = NULL;
+        tmp.physical_addr = 0xB8000;
+        map_pages(0xB8000, &tmp, pd);
+	
+	 tmp.next = NULL;
+        tmp.physical_addr = 0x7f000;
+        map_pages(0x7f000, &tmp, pd);
+
 
      // These are helper that helps us enable the interrupts for the platoform
     remap_pic();  //This help set the interrupt controller
@@ -88,12 +200,19 @@ void main(){
     init_idt();   // Initialize the interrupt descriptor table
     asm("sti");   // Enable interrupts
    
-    init_pfa_list();    
+
+        
+    loadPageDirectory(pd);
+
+    asm("mov %cr0, %eax\n"
+        "or $0x80000001,%eax\n"
+        "mov %eax,%cr0");
+	
    
- 
+    init_pfa_list();    
     while(1) {
-        asm("hlt");  // Halt until next interrupt
-    }
+         
+     }
 }
 
 

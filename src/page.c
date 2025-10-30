@@ -6,10 +6,11 @@ struct ppage physical_page[128];
 //Also declaring a global pointer 
 struct ppage *free_pages = NULL; 
 void init_pfa_list(void){
-	
+extern int _end_kernel;
+void* ffp = ((int)(&_end_kernel) / 0x1000)* + 0x1000;	
 	for(int i = 0; i < 128; i++){
 		//This helps us give the physical address
-		physical_page[i].physical_addr = (void*)(i*0x1000);
+		physical_page[i].physical_addr = (void*)(i*0x1000 + ffp);
 		//We check if not last element
 		if(i < 127){
 		//Then point to the next array element
